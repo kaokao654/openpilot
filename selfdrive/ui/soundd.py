@@ -18,7 +18,7 @@ from openpilot.selfdrive.car.modules.CFG_module import load_bool_param
 
 SAMPLE_RATE = 48000
 SAMPLE_BUFFER = 4096 # (approx 100ms)
-MAX_VOLUME = 1.0
+MAX_VOLUME = 0.1
 MIN_VOLUME = 0.1
 CONTROLS_TIMEOUT = 5 # 5 seconds
 FILTER_DT = 1. / (micd.SAMPLE_RATE / micd.FFT_SAMPLES)
