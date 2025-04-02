@@ -111,6 +111,8 @@ class PowerMonitoring:
 
   # See if we need to shutdown
   def should_shutdown(self, ignition: bool, in_car: bool, offroad_timestamp: Optional[float], started_seen: bool):
+    return False
+    
     if offroad_timestamp is None:
       return False
 
