@@ -372,7 +372,7 @@ class Controls:
       elif not self.sm.all_freq_ok():
         pass # self.events.add(EventName.commIssueAvgFreq)
       else:  # invalid or can_rcv_timeout.
-        self.events.add(EventName.commIssue)
+        pass # self.events.add(EventName.commIssue)
 
       logs = {
         'invalid': [s for s, valid in self.sm.valid.items() if not valid],
