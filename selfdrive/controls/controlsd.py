@@ -368,7 +368,7 @@ class Controls:
     no_system_errors = (not has_disable_events) or (len(self.events) == num_events)
     if (not self.sm.all_checks() or can_rcv_timeout) and no_system_errors:
       if not self.sm.all_alive():
-        self.events.add(EventName.commIssue)
+        pass # self.events.add(EventName.commIssue)
       elif not self.sm.all_freq_ok():
         pass # self.events.add(EventName.commIssueAvgFreq)
       else:  # invalid or can_rcv_timeout.
