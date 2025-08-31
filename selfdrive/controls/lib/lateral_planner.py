@@ -6,6 +6,7 @@ from cereal import log
 
 TRAJECTORY_SIZE = 33
 CAMERA_OFFSET = 0.04
+LANE_PROB_THRESHOLD = 0.5
 
 class LateralPlanner:
   def __init__(self, CP, debug=False):
@@ -24,6 +25,7 @@ class LateralPlanner:
     self.v_ego = MIN_SPEED
     self.l_lane_change_prob = 0.0
     self.r_lane_change_prob = 0.0
+    self.use_lane_lines = False
 
     self.debug_mode = debug
 
@@ -32,6 +34,7 @@ class LateralPlanner:
 
     # Parse model predictions
     md = sm['modelV2']
+    self.use_lane_lines = False
     if len(md.position.x) == TRAJECTORY_SIZE and len(md.velocity.x) == TRAJECTORY_SIZE and len(md.lateralPlannerSolution.x) == TRAJECTORY_SIZE:
       self.path_xyz = np.column_stack([md.position.x, md.position.y, md.position.z])
       self.velocity_xyz = np.column_stack([md.velocity.x, md.velocity.y, md.velocity.z])
@@ -39,6 +42,26 @@ class LateralPlanner:
       self.v_plan = np.clip(car_speed, MIN_SPEED, np.inf)
       self.v_ego = self.v_plan[0]
       self.x_sol = np.column_stack([md.lateralPlannerSolution.x, md.lateralPlannerSolution.y, md.lateralPlannerSolution.yaw, md.lateralPlannerSolution.yawRate])
+
+      lane_lines = md.laneLines
+      lane_probs = md.laneLineProbs
+      if len(lane_lines) >= 3 and len(lane_probs) >= 3:
+        left_prob = lane_probs[1]
+        right_prob = lane_probs[2]
+        if left_prob > LANE_PROB_THRESHOLD and right_prob > LANE_PROB_THRESHOLD:
+          pos_x = np.array(md.position.x)
+          left_y = np.array(lane_lines[1].y)
+          right_y = np.array(lane_lines[2].y)
+          center_y = (left_y + right_y) / 2.0
+          self.path_xyz[:, 1] = center_y
+          coeffs = np.polyfit(pos_x, center_y, 3)
+          dy = np.polyval(np.polyder(coeffs), pos_x)
+          ddy = np.polyval(np.polyder(coeffs, 2), pos_x)
+          yaw = np.arctan(dy)
+          curvature = ddy / (1.0 + dy**2) ** 1.5
+          yaw_rate = curvature * self.v_plan
+          self.x_sol = np.column_stack([pos_x, center_y, yaw, yaw_rate])
+          self.use_lane_lines = True
 
     # Lane change logic
     desire_state = md.meta.desireState
@@ -67,7 +90,7 @@ class LateralPlanner:
       lateralPlan.solverState.x = self.x_sol.tolist()
 
     lateralPlan.desire = self.DH.desire
-    lateralPlan.useLaneLines = False
+    lateralPlan.useLaneLines = bool(self.use_lane_lines)
     lateralPlan.laneChangeState = self.DH.lane_change_state
     lateralPlan.laneChangeDirection = self.DH.lane_change_direction
 
